@@ -14,7 +14,7 @@ from "../components/VideoPlayer";
 function Home() {
 
   const [results, setResults] =
-    useState<Moment[]>([]);
+    useState<Moment[] | null>(null);
 
   const [loading, setLoading] =
     useState(false);
@@ -278,7 +278,7 @@ function Home() {
 
         {/* RESULTS */}
 
-        {results.length > 0 && (
+        {results && results.length > 0 && !loading && (
 
           <div className="bg-white rounded-3xl shadow-lg p-8">
 
@@ -299,6 +299,39 @@ function Home() {
           </div>
 
         )}
+
+        {results &&
+          results.length === 0 &&
+          !loading && (
+
+            <div className="
+            bg-white
+            rounded-3xl
+            shadow-lg
+            p-10
+            text-center
+            ">
+
+              <div className="text-6xl mb-4">
+                🔍
+              </div>
+
+              <h2 className="
+              text-2xl
+              font-bold
+              text-slate-700
+              mb-2
+              ">
+                No Results Found
+              </h2>
+
+              <p className="text-slate-500">
+                Try a different search query.
+              </p>
+
+            </div>
+
+          )}
 
       </div>
 

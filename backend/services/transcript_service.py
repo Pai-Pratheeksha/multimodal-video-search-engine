@@ -4,17 +4,28 @@ Provide transcript search
 using Whisper output.
 """
 
+import os
 import json
-
-with open(
-    "transcripts/transcript.json",
-    "r"
-) as f:
-
-    TRANSCRIPT = json.load(f)
 
 
 def search_transcript(query: str):
+    if os.path.exists(
+        "transcripts/transcript.json"
+    ):
+
+        with open(
+            "transcripts/transcript.json",
+            "r"
+        ) as f:
+
+            TRANSCRIPT = json.load(f)
+
+    else:
+
+        TRANSCRIPT = []
+
+    if not TRANSCRIPT:
+        return []
 
     matches = []
     MAX_RESULTS = 5

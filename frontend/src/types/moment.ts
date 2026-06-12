@@ -13,4 +13,9 @@ export interface Moment {
   whisper_match: boolean;
 
   sources: string[];
+
+  confidence:
+    "high" |
+    "medium" |
+    "low";
 }

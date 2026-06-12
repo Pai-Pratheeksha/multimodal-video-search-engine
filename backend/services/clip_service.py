@@ -17,45 +17,58 @@ from transformers import (
 print("Loading CLIP Service...")
 
 model = CLIPModel.from_pretrained(
-    "openai/clip-vit-base-patch32"
+    "openai/clip-vit-base-patch16"
 )
 
 processor = CLIPProcessor.from_pretrained(
-    "openai/clip-vit-base-patch32"
+    "openai/clip-vit-base-patch16"
 )
 
-index = faiss.read_index(
-    "indexes/frame_index.faiss"
-)
-
-with open(
-    "indexes/frame_names.json",
-    "r"
-) as f:
-
-    FRAME_NAMES = json.load(f)
-
-if os.path.exists(
-    "indexes/frame_timestamps.json"
-):
-
-    with open(
-        "indexes/frame_timestamps.json",
-        "r"
-    ) as f:
-
-        FRAME_TIMESTAMPS = (
-            json.load(f)
-        )
-
-else:
-
-    FRAME_TIMESTAMPS = {}
 
 def search_frames(
     query: str,
-    top_k: int = 5
+    top_k: int = 20
 ):
+    if os.path.exists(
+        "indexes/frame_index.faiss"
+    ):
+
+        index = faiss.read_index(
+            "indexes/frame_index.faiss"
+        )
+
+        with open(
+            "indexes/frame_names.json",
+            "r"
+        ) as f:
+
+            FRAME_NAMES = json.load(f)
+
+    else:
+
+        index = None
+
+        FRAME_NAMES = []
+
+    if os.path.exists(
+        "indexes/frame_timestamps.json"
+    ):
+
+        with open(
+            "indexes/frame_timestamps.json",
+            "r"
+        ) as f:
+
+            FRAME_TIMESTAMPS = (
+                json.load(f)
+            )
+
+    else:
+
+        FRAME_TIMESTAMPS = {}
+
+    if index is None:
+        return []
 
     inputs = processor(
         text=[query],

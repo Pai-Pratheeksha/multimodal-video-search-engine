@@ -4,27 +4,48 @@ Provide object search functionality
 using YOLO detections.
 """
 
+import os
 import json
 
-with open(
-    "indexes/frame_objects.json",
-    "r"
-) as f:
-
-    FRAME_OBJECTS = json.load(f)
-
-with open(
-    "indexes/frame_timestamps.json",
-    "r"
-) as f:
-
-    FRAME_TIMESTAMPS = (
-        json.load(f)
-    )
-
-
 def search_objects(query: str):
+    if os.path.exists(
+        "indexes/frame_objects.json"
+    ):
 
+        with open(
+            "indexes/frame_objects.json",
+            "r"
+        ) as f:
+
+            FRAME_OBJECTS = (
+                json.load(f)
+            )
+
+    else:
+
+        FRAME_OBJECTS = {}
+
+    if os.path.exists(
+        "indexes/frame_timestamps.json"
+    ):
+
+        with open(
+            "indexes/frame_timestamps.json",
+            "r"
+        ) as f:
+
+            FRAME_TIMESTAMPS = (
+                json.load(f)
+            )
+
+    else:
+
+        FRAME_TIMESTAMPS = {}
+
+
+    if not FRAME_OBJECTS:
+        return []
+    
     matches = []
     MAX_RESULTS = 5
 
@@ -42,9 +63,9 @@ def search_objects(query: str):
                     frame,
 
                 "timestamp":
-                    FRAME_TIMESTAMPS[
-                        frame
-                    ]["timestamp"]
+                    FRAME_TIMESTAMPS
+                    .get(frame, {})
+                    .get("timestamp", 0)
 
             })
 

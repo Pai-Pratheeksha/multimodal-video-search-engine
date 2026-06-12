@@ -3,14 +3,14 @@ PURPOSE:
 Fuse CLIP, YOLO and Whisper
 results into unified moments.
 """
+
+import os
 import json
 
-with open(
-    "indexes/frame_timestamps.json",
-    "r"
-) as f:
-
-    FRAME_TIMESTAMPS = json.load(f)
+CLUSTER_WINDOW = 3  # seconds
+TOP_K_RESULTS = 5
+MIN_SCORE = 0.25
+MIN_RESULTS = 2
 
 from backend.services.clip_service import (
     search_frames
@@ -25,8 +25,11 @@ from backend.services.transcript_service import (
 )
 
 def get_nearest_frame(
-    timestamp: float
+    timestamp: float,
+    FRAME_TIMESTAMPS: dict
 ):
+    if not FRAME_TIMESTAMPS:
+        return None
 
     nearest_frame = None
 
@@ -62,6 +65,22 @@ def get_nearest_frame(
 def search_multimodal(
     query: str
 ):
+    if os.path.exists(
+        "indexes/frame_timestamps.json"
+    ):
+
+        with open(
+            "indexes/frame_timestamps.json",
+            "r"
+        ) as f:
+
+            FRAME_TIMESTAMPS = (
+                json.load(f)
+            )
+
+    else:
+
+        FRAME_TIMESTAMPS = {}
 
     clip_results = (
         search_frames(query)
@@ -123,8 +142,6 @@ def search_multimodal(
         key=lambda x:
             x["timestamp"]
     )
-
-    CLUSTER_WINDOW = 3
 
     clusters = []
     current_cluster = []
@@ -197,7 +214,8 @@ def search_multimodal(
         thumbnail = (
 
             get_nearest_frame(
-                center_timestamp
+                center_timestamp,
+                FRAME_TIMESTAMPS
             )
         )
 
@@ -244,6 +262,18 @@ def search_multimodal(
             )
         )
 
+        if cluster_score >= 0.50:
+
+            confidence = "high"
+
+        elif cluster_score >= 0.25:
+
+            confidence = "medium"
+
+        else:
+
+            confidence = "low"
+
         unified_moments.append({
 
             "timestamp":
@@ -275,7 +305,10 @@ def search_multimodal(
                 ),
 
             "sources":
-                sources
+                sources,
+
+            "confidence":
+                confidence
         })
 
     unified_moments.sort(
@@ -292,4 +325,18 @@ def search_multimodal(
 
         print(moment)
 
-    return unified_moments
+
+    filtered = [
+
+        moment
+
+        for moment in unified_moments
+
+        if moment["score"] >= MIN_SCORE
+    ]
+
+    if len(filtered) > 0:
+
+        return filtered[:TOP_K_RESULTS]
+
+    return unified_moments[:MIN_RESULTS]

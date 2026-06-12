@@ -26,11 +26,11 @@ from transformers import (
 print("Loading CLIP Model...")
 
 MODEL = CLIPModel.from_pretrained(
-    "openai/clip-vit-base-patch32"
+    "openai/clip-vit-base-patch16"
 )
 
 PROCESSOR = CLIPProcessor.from_pretrained(
-    "openai/clip-vit-base-patch32"
+    "openai/clip-vit-base-patch16"
 )
 
 

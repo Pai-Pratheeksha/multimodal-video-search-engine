@@ -20,7 +20,7 @@ from ultralytics import YOLO
 print("Loading YOLO Model...")
 
 MODEL = YOLO(
-    "yolov8n.pt"
+    "yolov8s.pt"
 )
 
 
