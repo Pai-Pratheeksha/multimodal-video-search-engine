@@ -65,6 +65,11 @@ def get_nearest_frame(
 def search_multimodal(
     query: str
 ):
+    query = query.strip()
+
+    if len(query) < 2:
+        return []
+    
     if os.path.exists(
         "indexes/frame_timestamps.json"
     ):

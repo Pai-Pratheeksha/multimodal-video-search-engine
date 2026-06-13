@@ -28,11 +28,50 @@ function Home() {
   const [activeTimestamp, setActiveTimestamp] =
     useState<number | null>(null);
 
+  const [videoReady, setVideoReady] =
+    useState(false);
+
+  const [videoName, setVideoName] =
+    useState("");
+
   const videoRef =
     useRef<HTMLVideoElement>(null);
 
   const videoContainerRef =
     useRef<HTMLDivElement>(null);
+
+  const checkVideoStatus = async () => {
+
+        try {
+
+          const response =
+            await api.get(
+              "/video-status"
+            );
+
+          setVideoReady(
+            response.data.video_ready
+          );
+
+          setVideoName(
+            response.data.video_name || ""
+          );
+
+          if (
+            response.data.video_url
+          ) {
+
+            setPreviewUrl(
+              response.data.video_url
+            );
+          }
+
+        } catch {
+
+          setVideoReady(false);
+
+        }
+    };
 
   useEffect(() => {
 
@@ -57,6 +96,8 @@ function Home() {
     };
 
     checkBackend();
+
+    checkVideoStatus();
 
     const interval =
         setInterval(
@@ -85,13 +126,18 @@ function Home() {
         response.data
       );
 
-    } catch (error) {
+    } catch (error: any) {
 
       console.error(error);
 
+      alert(
+        error.response?.data?.detail ||
+        "Search failed."
+      );
+
       setBackendStatus(
         "Offline"
-    );
+      );
 
     } finally {
 
@@ -225,12 +271,56 @@ function Home() {
 
         </div>
 
+        <div className="
+          bg-white
+          rounded-2xl
+          shadow
+          p-4
+          mb-8
+          ">
+
+            <h2 className="
+            font-semibold
+            text-lg
+            ">
+
+              Indexed Video
+
+            </h2>
+
+            {videoReady ? (
+
+              <p className="
+              text-green-700
+              mt-2
+              ">
+
+                📹 {videoName}
+
+              </p>
+
+            ) : (
+
+              <p className="
+              text-red-600
+              mt-2
+              ">
+
+                No video uploaded
+
+              </p>
+
+            )}
+
+          </div>
+
         {/* UPLOAD SECTION */}
 
         <div className="mb-8">
 
           <UploadForm
             setPreviewUrl={setPreviewUrl}
+            onUploadSuccess={checkVideoStatus}
           />
 
         </div>
@@ -250,6 +340,7 @@ function Home() {
 
           <SearchBar
             onSearch={handleSearch}
+            disabled={!videoReady}
           />
 
         </div>

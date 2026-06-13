@@ -4,14 +4,37 @@ type Props = {
   onSearch: (
     query: string
   ) => void;
+  disabled?: boolean;
 };
 
 function SearchBar({
   onSearch,
+  disabled
 }: Props) {
 
   const [query, setQuery] =
     useState("");
+
+  const handleSearch = () => {
+
+    const cleanedQuery =
+      query.trim();
+
+    if (
+      cleanedQuery.length < 2
+    ) {
+
+      alert(
+        "Please enter at least 2 characters."
+      );
+
+      return;
+    }
+
+    onSearch(
+      cleanedQuery
+    );
+  };
 
   return (
 
@@ -47,9 +70,8 @@ function SearchBar({
         />
 
         <button
-          onClick={() =>
-            onSearch(query)
-          }
+          disabled={disabled}
+          onClick={handleSearch}
           className="
           bg-green-600
           hover:bg-green-700
@@ -57,6 +79,8 @@ function SearchBar({
           px-6
           rounded-lg
           font-medium
+          disabled:bg-gray-400
+          disabled:cursor-not-allowed
           "
         >
           Search

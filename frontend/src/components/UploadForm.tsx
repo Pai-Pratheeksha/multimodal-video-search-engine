@@ -9,10 +9,14 @@ interface Props {
         string | null
       >
     >;
+
+    onUploadSuccess:
+      () => void;
 }
 
 function UploadForm({
-  setPreviewUrl
+  setPreviewUrl,
+  onUploadSuccess
 }: Props) {
 
   const [file, setFile] =
@@ -62,6 +66,8 @@ function UploadForm({
       setMessage(
         response.data.message
       );
+
+      onUploadSuccess();
 
       setPreviewUrl(
         `http://127.0.0.1:8000/videos/${response.data.filename}`

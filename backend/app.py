@@ -78,6 +78,17 @@ def search(query: str):
 def multimodal_search(
     query: str
 ):
+    query = query.strip()
+
+    if len(query) < 2:
+
+        raise HTTPException(
+
+            status_code=400,
+
+            detail=
+            "Please enter a valid search query."
+        )
 
     return search_multimodal(
         query
@@ -118,6 +129,18 @@ async def upload_video(
         video_path
     )
 
+    with open(
+        "indexes/video_metadata.json",
+        "w"
+    ) as f:
+
+        json.dump({
+
+            "video_name":
+                file.filename
+
+        }, f)
+
     return {
 
         "message":
@@ -136,6 +159,45 @@ def health():
     return {
         "status": "healthy",
         "service": "Multimodal Video Search Engine"
+    }
+
+@app.get("/video-status")
+def video_status():
+
+    metadata_file = (
+        "indexes/video_metadata.json"
+    )
+
+    if not os.path.exists(
+        metadata_file
+    ):
+
+        return {
+            "video_ready": False,
+            "video_name": None,
+            "video_url": None
+        }
+
+    with open(
+        metadata_file,
+        "r"
+    ) as f:
+
+        metadata = json.load(f)
+
+    video_name = (
+        metadata["video_name"]
+    )
+
+    return {
+
+        "video_ready": True,
+
+        "video_name":
+            video_name,
+
+        "video_url":
+            f"http://127.0.0.1:8000/videos/{video_name}"
     }
 
 @app.get("/video-info")
