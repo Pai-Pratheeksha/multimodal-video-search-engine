@@ -249,3 +249,11 @@ uvicorn backend.app:app --reload
 - Video Summarization
 - Conversational Video Search
 - Cloud Deployment
+
+## Disclaimer
+
+This project is developed solely for academic, educational, and research purposes.
+
+Any third-party videos, images, or media used during testing remain the property of their respective copyright owners. The project does not claim ownership of such content and is not intended for commercial use.
+
+All screenshots and demonstrations are provided only to showcase the functionality of the system.
