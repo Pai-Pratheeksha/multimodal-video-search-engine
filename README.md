@@ -1,14 +1,8 @@
 # Multimodal Video Search Engine
 
-A multimodal video retrieval system that enables users to search video content using:
+An AI-powered video retrieval system that enables semantic, visual, and speech-based search across video content.
 
-- Semantic Search (CLIP)
-- Object Detection (YOLOv8)
-- Speech Search (Whisper)
-- Multimodal Fusion Ranking
-
-Users can upload a video, search using natural language queries, and instantly jump to the most relevant moments.
-
+The system combines CLIP, YOLOv8, Whisper, and FAISS to identify relevant moments in a video and allows users to instantly navigate to the most relevant timestamps through an interactive interface.
 ---
 
 ## Features
@@ -60,16 +54,18 @@ Results from:
 are fused into unified moments using:
 
 - Temporal clustering
-- Weighted ranking
+- Weighted Confidence Scoring
 - Evidence aggregation
+- Result Ranking
 
 ---
 
 ### Interactive Video Navigation
 
-- Thumbnail previews
+- Thumbnail-based search results
+- Confidence indicators
 - Jump to timestamp
-- Auto-play
+- Automatic video playback
 - Smooth scrolling
 
 ---
@@ -141,6 +137,7 @@ frontend/
 docs/
 .gitignore
 requirements.txt
+requirements_freeze.txt
 README.md
 ```
 
@@ -188,10 +185,10 @@ mkdir videos
 Download the YOLO model:
 
 ```bash
-yolo detect predict model=yolov8n.pt
+yolo detect predict model=yolov8s.pt
 ```
 
-or download `yolov8n.pt` from the Ultralytics release page and place it in the project root.
+or download `yolov8s.pt` from the Ultralytics release page and place it in the project root.
 
 Then start the backend:
 
@@ -203,7 +200,10 @@ uvicorn backend.app:app --reload
 ## Future Improvements
 
 - Agentic AI Query Planning
+- PostgreSQL Metadata Storage
+- Qdrant Vector Database Integration
 - Real-time Video Indexing
 - Multi-video Collections
-- Hybrid Vector Databases
+- Video Summarization
+- Conversational Video Search
 - Cloud Deployment
