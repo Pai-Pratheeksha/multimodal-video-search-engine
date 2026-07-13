@@ -1,5 +1,7 @@
 export interface Moment {
 
+  video_id: string;
+
   timestamp: number;
 
   thumbnail?: string;

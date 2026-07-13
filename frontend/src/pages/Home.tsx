@@ -3,6 +3,7 @@ import { useEffect, useState, useRef } from "react";
 import UploadForm from "../components/UploadForm";
 import SearchBar from "../components/SearchBar";
 import MomentResults from "../components/MomentResults";
+import VideoLibrary from "../components/VideoLibrary";
 
 import { api } from "../api/api";
 
@@ -25,14 +26,20 @@ function Home() {
   const [previewUrl, setPreviewUrl] =
     useState<string | null>(null);
 
+  const [refreshKey, setRefreshKey] =
+    useState(0);
+
   const [activeTimestamp, setActiveTimestamp] =
     useState<number | null>(null);
 
   const [videoReady, setVideoReady] =
     useState(false);
 
-  const [videoName, setVideoName] =
-    useState("");
+  const [selectedVideo, setSelectedVideo] =
+    useState<string | null>(null);
+
+  const [selectedVideos, setSelectedVideos] =
+    useState<string[]>([]);
 
   const videoRef =
     useRef<HTMLVideoElement>(null);
@@ -51,10 +58,6 @@ function Home() {
 
           setVideoReady(
             response.data.video_ready
-          );
-
-          setVideoName(
-            response.data.video_name || ""
           );
 
           if (
@@ -113,13 +116,24 @@ function Home() {
     query: string
   ) => {
 
+    if (selectedVideos.length === 0) {
+
+        alert("Please select at least one video to search.");
+
+        return;
+
+    }
+
     setLoading(true);
 
     try {
 
+      const videos =
+        selectedVideos.join(",");
+
       const response =
         await api.get<Moment[]>(
-          `/multimodal-search?query=${query}`
+          `/multimodal-search?query=${query}&videos=${videos}`
         );
 
       setResults(
@@ -146,12 +160,12 @@ function Home() {
     }
   };
 
-  const jumpToMoment = (
-    timestamp: number
+  const jumpToMoment = async (
+    moment: Moment
   ) => {
 
     setActiveTimestamp(
-      timestamp
+      moment.timestamp
     );
 
     videoContainerRef.current
@@ -162,15 +176,53 @@ function Home() {
         block: "start"
     });
 
-    const video =
-      videoRef.current;
+    const expectedVideo =
+    `http://127.0.0.1:8000/videos/${moment.video_id}.mp4`;
+
+    if (previewUrl !== expectedVideo) {
+
+        setPreviewUrl(expectedVideo);
+
+        setSelectedVideo(`${moment.video_id}.mp4`);
+
+        await new Promise<void>((resolve) => {
+
+            const checkLoaded = () => {
+
+                const video = videoRef.current;
+
+                if (!video) return;
+
+                video.removeEventListener(
+                    "loadedmetadata",
+                    checkLoaded
+                );
+
+                resolve();
+
+            };
+
+            setTimeout(() => {
+
+                videoRef.current?.addEventListener(
+                    "loadedmetadata",
+                    checkLoaded
+                );
+
+            }, 0);
+
+        });
+
+    }
+
+    const video = videoRef.current;
 
     if (!video) {
-      return;
+        return;
     }
 
     video.currentTime =
-      timestamp;
+      moment.timestamp;
 
     const handleSeeked =
       async () => {
@@ -199,8 +251,6 @@ function Home() {
       handleSeeked
     );
   };
-
-  console.log(previewUrl);
 
   return (
 
@@ -271,66 +321,59 @@ function Home() {
 
         </div>
 
-        <div className="
-          bg-white
-          rounded-2xl
-          shadow
-          p-4
-          mb-8
-          ">
-
-            <h2 className="
-            font-semibold
-            text-lg
-            ">
-
-              Indexed Video
-
-            </h2>
-
-            {videoReady ? (
-
-              <p className="
-              text-green-700
-              mt-2
-              ">
-
-                📹 {videoName}
-
-              </p>
-
-            ) : (
-
-              <p className="
-              text-red-600
-              mt-2
-              ">
-
-                No video uploaded
-
-              </p>
-
-            )}
-
-          </div>
-
         {/* UPLOAD SECTION */}
 
-        <div className="mb-8">
+        <div className="grid lg:grid-cols-3 gap-6 mb-8 items-start">
 
-          <UploadForm
-            setPreviewUrl={setPreviewUrl}
-            onUploadSuccess={checkVideoStatus}
-          />
+            <div>
 
-        </div>
+                <UploadForm
 
-        <div ref={videoContainerRef}>
+                    setPreviewUrl={setPreviewUrl}
 
-          <VideoPlayer
-            ref={videoRef}
-            videoUrl={previewUrl}
-          />
+                    onUploadSuccess={(videoName) => {
+
+                        setSelectedVideo(videoName);
+
+                        setPreviewUrl(
+                            `http://127.0.0.1:8000/videos/${videoName}`
+                        );
+
+                        setRefreshKey(prev => prev + 1);
+
+                    }}
+
+                />
+
+            </div>
+
+            <div className="lg:col-span-2">
+
+                <VideoLibrary
+
+                    refreshKey={refreshKey}
+
+                    selectedVideo={selectedVideo}
+
+                    selectedVideos={selectedVideos}
+
+                    setSelectedVideos={setSelectedVideos}
+
+                    onPreview={(videoName) => {
+
+                      setSelectedVideo(videoName);
+
+                      setPreviewUrl(
+
+                          `http://127.0.0.1:8000/videos/${videoName}`
+
+                      );
+
+                    }}
+
+                />
+
+            </div>
 
         </div>
 
@@ -366,6 +409,15 @@ function Home() {
           </div>
 
         )}
+
+        <div ref={videoContainerRef} className="mb-8">
+
+            <VideoPlayer
+                ref={videoRef}
+                videoUrl={previewUrl}
+            />
+
+        </div>
 
         {/* RESULTS */}
 

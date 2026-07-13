@@ -25,45 +25,37 @@ from backend.services.transcript_service import (
 )
 
 def get_nearest_frame(
+    video_id: str,
     timestamp: float,
-    FRAME_TIMESTAMPS: dict
+    frame_metadata: list
 ):
-    if not FRAME_TIMESTAMPS:
+    if not frame_metadata:
         return None
 
-    nearest_frame = None
+    nearest = None
 
-    smallest_diff = float(
-        "inf"
-    )
+    smallest_diff = float("inf")
 
-    for frame_name, data in (
-        FRAME_TIMESTAMPS.items()
-    ):
+    for frame in frame_metadata:
 
-        frame_timestamp = (
-            data["timestamp"]
-        )
+        if frame["video_id"] != video_id:
+            continue
 
         diff = abs(
-
-            frame_timestamp -
-
-            timestamp
+            frame["timestamp"] - timestamp
         )
 
         if diff < smallest_diff:
 
             smallest_diff = diff
 
-            nearest_frame = (
-                frame_name
-            )
+            nearest = frame
 
-    return nearest_frame
+    return nearest
 
 def search_multimodal(
-    query: str
+    query: str,
+    selected_videos=None
 ):
     query = query.strip()
 
@@ -71,39 +63,49 @@ def search_multimodal(
         return []
     
     if os.path.exists(
-        "indexes/frame_timestamps.json"
+        "indexes/frame_metadata.json"
     ):
 
         with open(
-            "indexes/frame_timestamps.json",
+            "indexes/frame_metadata.json",
             "r"
         ) as f:
 
-            FRAME_TIMESTAMPS = (
-                json.load(f)
-            )
+            FRAME_METADATA = json.load(f)
 
     else:
 
-        FRAME_TIMESTAMPS = {}
+        FRAME_METADATA = []
 
     clip_results = (
-        search_frames(query)
+        search_frames(query, selected_videos)
     )
+
+    print("\nCLIP RESULTS")
+    print(clip_results)
 
     yolo_results = (
-        search_objects(query)
+        search_objects(query, selected_videos)
     )
 
+    print("\nYOLO RESULTS")
+    print(yolo_results)
+
     transcript_results = (
-        search_transcript(query)
+        search_transcript(query, selected_videos)
     )
+
+    print("\nTRANSCRIPT RESULTS")
+    print(transcript_results)
 
     all_moments = []
 
     for item in clip_results:
 
         all_moments.append({
+
+            "video_id":
+                item["video_id"],
 
             "timestamp":
                 item["timestamp"],
@@ -119,6 +121,9 @@ def search_multimodal(
 
         all_moments.append({
 
+            "video_id":
+                item["video_id"],
+
             "timestamp":
                 item["timestamp"],
 
@@ -133,6 +138,9 @@ def search_multimodal(
 
         all_moments.append({
 
+            "video_id":
+                item["video_id"],
+
             "timestamp":
                 item["start"],
 
@@ -144,8 +152,10 @@ def search_multimodal(
         })
 
     all_moments.sort(
-        key=lambda x:
+        key=lambda x:(
+            x["video_id"],
             x["timestamp"]
+        )
     )
 
     clusters = []
@@ -161,20 +171,18 @@ def search_multimodal(
 
             continue
 
-        previous_time = (
-            current_cluster[-1]
-            ["timestamp"]
+        previous = current_cluster[-1]
+
+        same_video = (
+            previous["video_id"] == moment["video_id"]
         )
 
-        current_time = (
-            moment["timestamp"]
+        close_in_time = (
+            abs(moment["timestamp"] - previous["timestamp"]) <=
+            CLUSTER_WINDOW
         )
 
-        if (
-            current_time -
-            previous_time
-            <= CLUSTER_WINDOW
-        ):
+        if same_video and close_in_time:
 
             current_cluster.append(
                 moment
@@ -216,11 +224,14 @@ def search_multimodal(
             2
         )
 
+        video_id = cluster[0]["video_id"]
+
         thumbnail = (
 
             get_nearest_frame(
+                video_id,
                 center_timestamp,
-                FRAME_TIMESTAMPS
+                FRAME_METADATA
             )
         )
 
@@ -279,13 +290,25 @@ def search_multimodal(
 
             confidence = "low"
 
+        thumbnail_path = None
+
+        if thumbnail:
+
+            thumbnail_path = (
+                f"{video_id}/"
+                f"{thumbnail['frame']}"
+            )
+
         unified_moments.append({
 
             "timestamp":
                 center_timestamp,
+            
+            "video_id":
+                video_id,
 
             "thumbnail":
-                thumbnail,
+                thumbnail_path,
 
             "score":
                 round(
@@ -343,5 +366,7 @@ def search_multimodal(
     if len(filtered) > 0:
 
         return filtered[:TOP_K_RESULTS]
+
+    print("Fusion:", selected_videos)
 
     return unified_moments[:MIN_RESULTS]

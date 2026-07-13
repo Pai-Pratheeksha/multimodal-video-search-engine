@@ -19,11 +19,13 @@ import json
 import faiss
 import numpy as np
 
-
 def build_faiss_index(
-    embeddings_file: str = "indexes/frame_embeddings.npy",
-    frame_dir: str = "frames"
+    video_id: str
 ):
+
+    embeddings_file = (
+        f"indexes/{video_id}_embeddings.npy"
+    )
 
     embeddings = np.load(
         embeddings_file
@@ -34,50 +36,134 @@ def build_faiss_index(
         embeddings
     )
 
+    index_file = "indexes/frame_index.faiss"
+
     dimension = embeddings.shape[1]
 
-    index = faiss.IndexFlatIP(
-        dimension
-    )
+    if os.path.exists(index_file):
 
-    index.add(
-        embeddings
-    )
+        index = faiss.read_index(
+            index_file
+        )
+
+    else:
+
+        base_index = faiss.IndexFlatIP(
+            dimension
+        )
+
+        index = faiss.IndexIDMap2(
+            base_index
+        )
+
+    existing_vectors = index.ntotal
 
     os.makedirs(
         "indexes",
         exist_ok=True
     )
 
-    faiss.write_index(
-        index,
-        "indexes/frame_index.faiss"
+    with open(
+        f"metadata/{video_id}.json",
+        "r"
+    ) as f:
+
+        frame_metadata = json.load(f)
+
+    for item in frame_metadata:
+        item["vector_id"] += existing_vectors
+        
+
+    metadata_file = "indexes/frame_metadata.json"
+
+    if os.path.exists(metadata_file):
+
+        try:
+
+            with open(metadata_file, "r") as f:
+
+                all_metadata = json.load(f)
+
+        except json.JSONDecodeError:
+
+            all_metadata = []
+
+    else:
+
+        all_metadata = []
+
+    all_metadata = [
+
+        item
+
+        for item in all_metadata
+
+        if item["video_id"] != video_id
+
+    ]
+
+    all_metadata.extend(
+        frame_metadata
     )
 
-    frame_names = sorted([
-        f for f in os.listdir(frame_dir)
-        if f.endswith(".jpg")
-    ])
+    ids = np.arange(
+        existing_vectors,
+        existing_vectors + len(embeddings),
+        dtype=np.int64
+    )
+
+    index.add_with_ids(
+        embeddings,
+        ids
+    )
+
+    faiss.write_index(
+        index,
+        index_file
+    )
 
     with open(
-        "indexes/frame_names.json",
+        metadata_file,
         "w"
     ) as f:
 
         json.dump(
-            frame_names,
+            all_metadata,
             f,
             indent=4
         )
 
+    metadata_path = (
+        f"metadata/{video_id}.json"
+    )
+
+    if os.path.exists(
+        embeddings_file
+    ):
+
+        os.remove(
+            embeddings_file
+        )
+
+    if os.path.exists(
+        metadata_path
+    ):
+
+        os.remove(
+            metadata_path
+        )
+
+
     return {
 
-        "vectors_indexed":
-            index.ntotal,
+        "video_id": video_id,
 
-        "dimension":
-            dimension,
+        "new_vectors": len(embeddings),
 
-        "index_file":
-            "indexes/frame_index.faiss"
+        "total_vectors": index.ntotal,
+
+        "dimension": dimension,
+
+        "index_file": index_file
+
     }

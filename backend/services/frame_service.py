@@ -18,30 +18,18 @@ import json
 
 def extract_frames(
     video_path: str,
-    output_dir: str = "frames"
+    video_id: str
 ):
+
+    output_dir = os.path.join(
+        "frames",
+        video_id
+    )
 
     os.makedirs(
         output_dir,
         exist_ok=True
     )
-
-    # Remove old frames
-    for file in os.listdir(
-        output_dir
-    ):
-
-        file_path = os.path.join(
-            output_dir,
-            file
-        )
-
-        if os.path.isfile(
-            file_path
-        ):
-            os.remove(
-                file_path
-            )
 
     video = cv2.VideoCapture(
         video_path
@@ -53,7 +41,7 @@ def extract_frames(
 
     frame_count = 0
     saved_count = 0
-    timestamps = {}
+    frame_metadata = []
 
     while True:
 
@@ -75,16 +63,18 @@ def extract_frames(
                 frame_filename
             )
 
-            timestamps[
-                frame_filename
-            ] = {
+            frame_metadata.append({
 
-                "timestamp":
-                    round(
-                        frame_count / fps,
-                        2
-                    )
-            }
+                "video_id": video_id,
+
+                "frame": frame_filename,
+
+                "timestamp": round(
+                    frame_count / fps,
+                    2
+                )
+
+            })
 
             cv2.imwrite(
                 filename,
@@ -97,18 +87,25 @@ def extract_frames(
 
     video.release()
 
+    os.makedirs(
+        "metadata",
+        exist_ok=True
+    )
+
     with open(
-        "indexes/frame_timestamps.json",
+        f"metadata/{video_id}.json",
         "w"
     ) as f:
 
         json.dump(
-            timestamps,
+            frame_metadata,
             f,
             indent=4
         )
 
     return {
+        "video_id": video_id,
+
         "frames_extracted":
             saved_count,
 

@@ -18,8 +18,12 @@ import subprocess
 
 def extract_audio(
     video_path: str,
-    output_file: str = "transcripts/audio.wav"
+    video_id: str
 ):
+
+    output_file = (
+        f"transcripts/{video_id}_audio.wav"
+    )
 
     os.makedirs(
         "transcripts",

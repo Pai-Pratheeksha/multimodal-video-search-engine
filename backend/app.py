@@ -76,7 +76,8 @@ def search(query: str):
     "/multimodal-search"
 )
 def multimodal_search(
-    query: str
+    query: str,
+    videos: str = ""
 ):
     query = query.strip()
 
@@ -89,9 +90,22 @@ def multimodal_search(
             detail=
             "Please enter a valid search query."
         )
+    
+    selected_videos = [
+
+        video
+
+        for video in videos.split(",")
+
+        if video
+
+    ]
+
+    print("Selected videos:", selected_videos)
 
     return search_multimodal(
-        query
+        query,
+        selected_videos
     )
 
 @app.post("/upload", tags=["Video Processing"])
@@ -125,21 +139,62 @@ async def upload_video(
             buffer
         )
 
-    result = process_video(
-        video_path
+    video_id = (
+        os.path.splitext(file.filename)[0]
+        .strip()
+        .lower()
+        .replace(" ", "_")
     )
 
-    with open(
-        "indexes/video_metadata.json",
-        "w"
-    ) as f:
+    library_file = "indexes/video_library.json"
 
-        json.dump({
+    video_library = []
 
-            "video_name":
-                file.filename
+    if os.path.exists(library_file):
 
-        }, f)
+        try:
+
+            with open(library_file, "r") as f:
+                video_library = json.load(f)
+
+        except json.JSONDecodeError:
+
+            video_library = []
+
+    for video in video_library:
+
+        if video["video_id"] == video_id:
+
+            raise HTTPException(
+
+                status_code=409,
+
+                detail=(
+                    "This video has already been indexed."
+                )
+
+            )
+
+    result = process_video(
+        video_path,
+        video_id
+    )
+
+    video_library.append({
+
+        "video_id": video_id,
+
+        "video_name": file.filename
+
+    })
+
+    with open(library_file, "w") as f:
+
+        json.dump(
+            video_library,
+            f,
+            indent=4
+        )
 
     return {
 
@@ -164,13 +219,9 @@ def health():
 @app.get("/video-status")
 def video_status():
 
-    metadata_file = (
-        "indexes/video_metadata.json"
-    )
+    library_file = "indexes/video_library.json"
 
-    if not os.path.exists(
-        metadata_file
-    ):
+    if not os.path.exists(library_file):
 
         return {
             "video_ready": False,
@@ -178,27 +229,55 @@ def video_status():
             "video_url": None
         }
 
-    with open(
-        metadata_file,
-        "r"
-    ) as f:
+    video_library = []
 
-        metadata = json.load(f)
+    if os.path.exists(library_file):
 
-    video_name = (
-        metadata["video_name"]
-    )
+        try:
+
+            with open(library_file, "r") as f:
+                video_library = json.load(f)
+
+        except json.JSONDecodeError:
+
+            video_library = []
+        
+    if not video_library:
+
+        return {
+            "video_ready": False,
+            "video_name": None,
+            "video_url": None
+        }
+
+    latest_video = video_library[-1]
 
     return {
-
         "video_ready": True,
-
-        "video_name":
-            video_name,
-
-        "video_url":
-            f"http://127.0.0.1:8000/videos/{video_name}"
+        "video_name": latest_video["video_name"],
+        "video_url": f"http://127.0.0.1:8000/videos/{latest_video['video_name']}"
     }
+
+@app.get("/videos")
+def get_videos():
+
+    library_file = "indexes/video_library.json"
+
+    if not os.path.exists(library_file):
+
+        return []
+
+    try:
+
+        with open(library_file, "r") as f:
+
+            videos = json.load(f)
+
+    except json.JSONDecodeError:
+
+        return []
+
+    return videos
 
 @app.get("/video-info")
 def video_info():

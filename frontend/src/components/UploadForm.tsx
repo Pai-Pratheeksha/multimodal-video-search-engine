@@ -11,7 +11,7 @@ interface Props {
     >;
 
     onUploadSuccess:
-      () => void;
+      (videoName: string) => void;
 }
 
 function UploadForm({
@@ -24,6 +24,9 @@ function UploadForm({
 
   const [message, setMessage] =
     useState("");
+
+  const [messageType, setMessageType] =
+    useState<"success" | "error">("success");
 
   const [uploading, setUploading] =
     useState(false);
@@ -50,6 +53,7 @@ function UploadForm({
     try {
 
       setUploading(true);
+      setMessage("");
 
       const response =
         await api.post(
@@ -63,23 +67,41 @@ function UploadForm({
           }
         );
 
+      setMessageType("success");
+
       setMessage(
-        response.data.message
+          response.data.message
       );
 
-      onUploadSuccess();
+      onUploadSuccess(response.data.filename);
 
       setPreviewUrl(
         `http://127.0.0.1:8000/videos/${response.data.filename}`
       );
 
-    } catch (error) {
+      setFile(null);
+
+    } catch (error: any) {
 
       console.error(error);
 
-      setMessage(
-        "Upload failed."
-      );
+      if (error.response?.status === 409) {
+
+        setMessageType("error");
+
+        setMessage(
+            "⚠️ This video has already been indexed."
+        );
+
+      } else {
+
+          setMessageType("error");
+
+          setMessage(
+              "Failed to upload video."
+          );
+
+      }
 
     } finally {
 
@@ -220,23 +242,30 @@ function UploadForm({
       {message && (
 
         <div
-          className="
-          mt-4
-          p-3
-          rounded-lg
-          bg-green-50
-          border
-          border-green-200
-          text-green-700
-          font-medium
-          "
+            className={`
+
+            mt-4
+            p-3
+            rounded-lg
+            font-medium
+
+            ${
+                messageType === "success"
+
+                ? "bg-green-50 border border-green-200 text-green-700"
+
+                : "bg-red-50 border border-red-200 text-red-700"
+
+            }
+
+            `}
         >
 
-          {message}
+            {message}
 
         </div>
 
-      )}
+    )}
 
     </div>
   );
