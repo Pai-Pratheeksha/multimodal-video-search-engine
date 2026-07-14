@@ -56,8 +56,6 @@ def build_faiss_index(
             base_index
         )
 
-    existing_vectors = index.ntotal
-
     os.makedirs(
         "indexes",
         exist_ok=True
@@ -69,9 +67,6 @@ def build_faiss_index(
     ) as f:
 
         frame_metadata = json.load(f)
-
-    for item in frame_metadata:
-        item["vector_id"] += existing_vectors
         
 
     metadata_file = "indexes/frame_metadata.json"
@@ -92,6 +87,34 @@ def build_faiss_index(
 
         all_metadata = []
 
+    if all_metadata:
+
+        next_vector_id = (
+
+                max(
+
+                    item["vector_id"]
+
+                    for item in all_metadata
+
+                )
+
+                + 1
+
+            )
+
+    else:
+
+        next_vector_id = 0
+
+    for i, item in enumerate(frame_metadata):
+
+        item["vector_id"] = (
+
+            next_vector_id + i
+
+        )
+
     all_metadata = [
 
         item
@@ -107,9 +130,13 @@ def build_faiss_index(
     )
 
     ids = np.arange(
-        existing_vectors,
-        existing_vectors + len(embeddings),
+
+        next_vector_id,
+
+        next_vector_id + len(embeddings),
+
         dtype=np.int64
+
     )
 
     index.add_with_ids(

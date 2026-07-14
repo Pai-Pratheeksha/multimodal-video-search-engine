@@ -24,6 +24,10 @@ from backend.services.fusion_service import (
     search_multimodal
 )
 
+from backend.services.delete_video_service import (
+    delete_video
+)
+
 # Create App
 app = FastAPI(
     title="Multimodal Video Search Engine",
@@ -121,6 +125,11 @@ async def upload_video(
 
     os.makedirs(
         "videos",
+        exist_ok=True
+    )
+
+    os.makedirs(
+        "indexes",
         exist_ok=True
     )
 
@@ -233,6 +242,9 @@ async def upload_batch(
 
             video_library = []
 
+    print("Current library:")
+    print(video_library)
+
     processed = []
 
     duplicates = []
@@ -258,6 +270,8 @@ async def upload_batch(
             .lower()
             .replace(" ", "_")
         )
+
+        print("Uploading:", video_id)
 
         if any(
             video["video_id"] == video_id
@@ -318,6 +332,8 @@ async def upload_batch(
             "video_name": file.filename
 
         })
+        
+    print("Processed list:", processed)
 
     with open(library_file, "w") as f:
 
@@ -340,6 +356,10 @@ async def upload_batch(
         message = (
             "No new videos were uploaded."
         )
+
+    print("Processed:", processed)
+    print("Duplicates:", duplicates)
+    print("Failed:", failed)
 
     return {
 
@@ -423,6 +443,25 @@ def get_videos():
         return []
 
     return videos
+
+@app.delete("/video/{video_id}")
+def delete_video_endpoint(
+    video_id: str
+):
+
+    result = delete_video(video_id)
+
+    if not result["success"]:
+
+        raise HTTPException(
+
+            status_code=404,
+
+            detail=result["message"]
+
+        )
+
+    return result
 
 @app.get("/video-info")
 def video_info():

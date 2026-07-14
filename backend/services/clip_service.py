@@ -57,6 +57,14 @@ def search_frames(
 
             FRAME_METADATA = []
 
+    metadata_lookup = {
+
+        item["vector_id"]: item
+
+        for item in FRAME_METADATA
+
+    }
+
     if index is None:
         return []
 
@@ -97,7 +105,9 @@ def search_frames(
     for rank, idx in enumerate(
         indices[0]
     ):
-        if idx >= len(FRAME_METADATA):
+        frame = metadata_lookup.get(int(idx))
+
+        if not frame:
             continue
 
         similarity = float(
@@ -106,8 +116,6 @@ def search_frames(
 
         if similarity < 0.22:
             continue
-
-        frame = FRAME_METADATA[idx]
 
         if (
             selected_videos

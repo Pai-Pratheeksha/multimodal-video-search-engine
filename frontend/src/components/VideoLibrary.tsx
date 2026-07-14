@@ -19,6 +19,9 @@ interface Props {
             React.SetStateAction<string[]>
         >;
     onPreview: (videoName: string) => void;
+    onDelete: (
+        videoId: string
+    ) => void;
 }
 
 function VideoLibrary({
@@ -26,7 +29,8 @@ function VideoLibrary({
     selectedVideo,
     selectedVideos,
     setSelectedVideos,
-    onPreview
+    onPreview,
+    onDelete
 
 }: Props) {
 
@@ -239,20 +243,24 @@ function VideoLibrary({
 
                         <button
 
-                            disabled
+                            onClick={() =>
+
+                                onDelete(video.video_id)
+
+                            }
 
                             className="
-                            bg-gray-300
-                            text-gray-600
-                            px-4
-                            py-2
-                            rounded-lg
-                            cursor-not-allowed
+                                bg-red-500
+                                hover:bg-red-600
+                                text-white
+                                px-4
+                                py-2
+                                rounded-lg
                             "
 
                         >
 
-                            🗑 Delete
+                            Delete
 
                         </button>
 

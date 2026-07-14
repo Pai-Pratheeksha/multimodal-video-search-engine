@@ -4,8 +4,10 @@ import UploadForm from "../components/UploadForm";
 import SearchBar from "../components/SearchBar";
 import MomentResults from "../components/MomentResults";
 import VideoLibrary from "../components/VideoLibrary";
-
-import { api } from "../api/api";
+import {
+    api,
+    deleteVideo
+} from "../api/api";
 
 import type { Moment } from "../types/moment";
 
@@ -370,6 +372,36 @@ function Home() {
                           `http://127.0.0.1:8000/videos/${videoName}`
 
                       );
+
+                    }}
+
+                    onDelete={async (videoId) => {
+
+                        if (
+                            !window.confirm(
+                                "Delete this video?"
+                            )
+                        ) {
+                            return;
+                        }
+
+                        try {
+
+                            await deleteVideo(videoId);
+
+                            setRefreshKey(
+                                prev => prev + 1
+                            );
+
+                        } catch (error) {
+
+                            console.error(error);
+
+                            alert(
+                                "Failed to delete video."
+                            );
+
+                        }
 
                     }}
 

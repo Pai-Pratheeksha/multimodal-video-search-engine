@@ -33,3 +33,13 @@ export const getVideoStatus = () =>
 
 export const getVideoInfo = () =>
   api.get("/video-info");
+
+export const deleteVideo = (
+    videoId: string
+) => {
+
+    return api.delete(
+        `/video/${videoId}`
+    );
+
+};
