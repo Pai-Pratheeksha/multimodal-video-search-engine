@@ -35,6 +35,9 @@ function Home() {
   const [videoReady, setVideoReady] =
     useState(false);
 
+  const [pendingMoment, setPendingMoment] =
+    useState<Moment | null>(null);
+
   const [selectedVideo, setSelectedVideo] =
     useState<string | null>(null);
 
@@ -59,15 +62,6 @@ function Home() {
           setVideoReady(
             response.data.video_ready
           );
-
-          if (
-            response.data.video_url
-          ) {
-
-            setPreviewUrl(
-              response.data.video_url
-            );
-          }
 
         } catch {
 
@@ -111,6 +105,47 @@ function Home() {
     return () =>
         clearInterval(interval);
     }, []);
+
+  useEffect(() => {
+
+      if (!pendingMoment)
+          return;
+
+      const video = videoRef.current;
+
+      if (!video)
+          return;
+
+      const handleLoaded = async () => {
+
+          video.removeEventListener(
+              "loadedmetadata",
+              handleLoaded
+          );
+
+          video.currentTime =
+              pendingMoment.timestamp;
+
+          await video.play();
+
+                videoContainerRef.current?.scrollIntoView({
+
+              behavior: "smooth",
+
+              block: "start"
+
+          });
+
+          setPendingMoment(null);
+
+      };
+
+      video.addEventListener(
+          "loadedmetadata",
+          handleLoaded
+      );
+
+  }, [previewUrl, pendingMoment]);
 
   const handleSearch = async (
     query: string
@@ -185,34 +220,9 @@ function Home() {
 
         setSelectedVideo(`${moment.video_id}.mp4`);
 
-        await new Promise<void>((resolve) => {
+        setPendingMoment(moment);
 
-            const checkLoaded = () => {
-
-                const video = videoRef.current;
-
-                if (!video) return;
-
-                video.removeEventListener(
-                    "loadedmetadata",
-                    checkLoaded
-                );
-
-                resolve();
-
-            };
-
-            setTimeout(() => {
-
-                videoRef.current?.addEventListener(
-                    "loadedmetadata",
-                    checkLoaded
-                );
-
-            }, 0);
-
-        });
-
+        return;
     }
 
     const video = videoRef.current;
@@ -329,15 +339,7 @@ function Home() {
 
                 <UploadForm
 
-                    setPreviewUrl={setPreviewUrl}
-
-                    onUploadSuccess={(videoName) => {
-
-                        setSelectedVideo(videoName);
-
-                        setPreviewUrl(
-                            `http://127.0.0.1:8000/videos/${videoName}`
-                        );
+                    onUploadSuccess={() => {
 
                         setRefreshKey(prev => prev + 1);
 
@@ -410,14 +412,46 @@ function Home() {
 
         )}
 
-        <div ref={videoContainerRef} className="mb-8">
+        {previewUrl ? (
 
-            <VideoPlayer
-                ref={videoRef}
-                videoUrl={previewUrl}
-            />
+            <div
+                ref={videoContainerRef}
+                className="mb-8"
+            >
 
-        </div>
+                <VideoPlayer
+                    ref={videoRef}
+                    videoUrl={previewUrl}
+                />
+
+            </div>
+
+        ) : (
+
+            <div className="bg-white rounded-2xl shadow p-10 mb-8 text-center">
+
+                <div className="text-6xl mb-4">
+
+                    🎥
+
+                </div>
+
+                <h2 className="text-2xl font-bold">
+
+                    Video Player
+
+                </h2>
+
+                <p className="text-gray-500 mt-2">
+
+                    Click <strong>Play</strong> from the library
+                    or select a search result to open a video.
+
+                </p>
+
+            </div>
+
+        )}
 
         {/* RESULTS */}
 

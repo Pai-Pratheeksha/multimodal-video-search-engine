@@ -203,7 +203,7 @@ function VideoLibrary({
 
                                         <p className="text-blue-600 text-sm">
 
-                                            👁 Currently Previewing
+                                            👁 Currently Playing
 
                                         </p>
 
@@ -233,7 +233,7 @@ function VideoLibrary({
                             "
                         >
 
-                            Preview
+                            Play
 
                         </button>
 

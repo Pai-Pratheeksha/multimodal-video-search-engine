@@ -3,24 +3,16 @@ import { api } from "../api/api";
 
 interface Props {
 
-  setPreviewUrl:
-    React.Dispatch<
-      React.SetStateAction<
-        string | null
-      >
-    >;
-
     onUploadSuccess:
       (videoName: string) => void;
 }
 
 function UploadForm({
-  setPreviewUrl,
   onUploadSuccess
 }: Props) {
 
-  const [file, setFile] =
-    useState<File | null>(null);
+  const [files, setFiles] =
+    useState<File[]>([]);
 
   const [message, setMessage] =
     useState("");
@@ -33,7 +25,7 @@ function UploadForm({
 
   const handleUpload = async () => {
 
-    if (!file) {
+    if (files.length==0) {
 
       setMessage(
         "Please select a video."
@@ -45,10 +37,14 @@ function UploadForm({
     const formData =
       new FormData();
 
-    formData.append(
-      "file",
-      file
-    );
+    files.forEach(file => {
+
+        formData.append(
+            "files",
+            file
+        );
+
+    });
 
     try {
 
@@ -57,7 +53,7 @@ function UploadForm({
 
       const response =
         await api.post(
-          "/upload",
+          "/upload-batch",
           formData,
           {
             headers: {
@@ -73,13 +69,21 @@ function UploadForm({
           response.data.message
       );
 
-      onUploadSuccess(response.data.filename);
+      if (response.data.processed.length > 0) {
 
-      setPreviewUrl(
-        `http://127.0.0.1:8000/videos/${response.data.filename}`
-      );
+          const latest =
 
-      setFile(null);
+              response.data.processed.at(-1);
+
+          onUploadSuccess(
+
+              latest.video_name
+
+          );
+
+      }
+
+      setFiles([]);
 
     } catch (error: any) {
 
@@ -110,37 +114,53 @@ function UploadForm({
     }
   };
 
+  const removeFile = (
+      fileName: string
+  ) => {
+
+      const updatedFiles = files.filter(
+
+          file => file.name !== fileName
+
+      );
+
+      setFiles(updatedFiles);
+
+  };
+
   return (
 
     <div className="bg-white rounded-2xl shadow-lg p-6">
 
       <h2 className="text-2xl font-bold mb-2">
-        Upload Video
+        Upload Videos
       </h2>
 
       <p className="text-gray-500 mb-6">
-        Upload an MP4 video for indexing,
+        Upload MP4 videos for indexing,
         object detection and semantic search.
       </p>
 
       <label
-        htmlFor="video-upload"
-        className="
-        flex
-        flex-col
-        items-center
-        justify-center
-        w-full
-        h-40
-        border-2
-        border-dashed
-        border-gray-300
-        rounded-2xl
-        bg-gray-50
-        hover:bg-gray-100
-        cursor-pointer
-        transition
-        "
+        htmlFor={uploading ? undefined : "video-upload"}
+        className={`
+          flex
+          flex-col
+          items-center
+          justify-center
+          w-full
+          h-40
+          border-2
+          border-dashed
+          rounded-2xl
+          transition
+
+          ${
+              uploading
+              ? "bg-gray-100 border-gray-200 cursor-not-allowed"
+              : "bg-gray-50 border-gray-300 hover:bg-gray-100 cursor-pointer"
+          }
+      `}
       >
 
         <div className="text-center">
@@ -150,7 +170,7 @@ function UploadForm({
           </div>
 
           <p className="font-semibold">
-            Click to choose a video
+            Click to choose videos
           </p>
 
           <p className="text-sm text-gray-500 mt-1">
@@ -162,82 +182,215 @@ function UploadForm({
       </label>
 
       <input
+        multiple
+        disabled={uploading}
         id="video-upload"
         type="file"
         accept=".mp4"
         className="hidden"
         onChange={(e) => {
 
-          const selectedFile =
-            e.target.files?.[0] || null;
+          const selectedFiles =
+              Array.from(
+                  e.target.files || []
+              );
 
-          setFile(
-            selectedFile
-          );
+          setFiles(prev => {
 
-          if (selectedFile) {
-            setPreviewUrl(
-                URL.createObjectURL(
-                    selectedFile
-                )
-            );}
+              const merged = [
+
+                  ...prev,
+
+                  ...selectedFiles
+
+              ];
+
+              return merged.filter(
+
+                  (file, index, self) =>
+
+                      index === self.findIndex(
+
+                          f => f.name === file.name
+
+                      )
+
+              );
+
+          });
         }}
       />
 
-      {file && (
+      {files.length > 0 && (
 
-        <div
-          className="
-          mt-4
-          p-4
-          rounded-xl
-          bg-blue-50
-          border
-          border-blue-200
-          "
-        >
+          <div
+              className="
+              mt-4
+              p-4
+              rounded-xl
+              bg-blue-50
+              border
+              border-blue-200
+              "
+          >
 
-          <p className="font-semibold">
-            {file.name}
-          </p>
+              <p className="font-semibold mb-3">
 
-          <p className="text-sm text-gray-600">
+                  Selected Videos ({files.length})
 
-            Size:
-            {" "}
-            {(file.size / 1024 / 1024)
-              .toFixed(2)}
-            {" "}
-            MB
+              </p>
 
-          </p>
+              {
 
-        </div>
+                  files.map(file => (
+
+                      <div
+
+                          key={file.name}
+
+                          className="
+                          flex
+                          justify-between
+                          items-center
+                          gap-4
+                          mb-3
+                          px-4
+                          py-2
+                          bg-white
+                          rounded-lg
+                          "
+                      >
+                        <div className="flex-1 min-w-0">
+
+                          <p className="font-medium truncate">
+
+                              📹 {file.name}
+
+                          </p>
+
+                          <p className="text-sm text-gray-600">
+
+                              {(file.size / 1024 / 1024).toFixed(2)} MB
+
+                          </p>
+
+                      </div>
+
+                      <button
+
+                          onClick={() =>
+
+                              removeFile(file.name)
+
+                          }
+
+                          disabled={uploading}
+                          className={`
+                              flex-shrink-0
+                              font-medium
+
+                              ${
+                                  uploading
+                                  ? "text-gray-400 cursor-not-allowed"
+                                  : "text-red-600 hover:text-red-800"
+                              }
+                          `}
+                      >
+
+                          🗑 Remove
+
+                      </button>
+
+                  </div>
+
+                  ))
+
+              }
+
+          </div>
 
       )}
 
-      <button
-        onClick={handleUpload}
-        disabled={uploading}
-        className="
-        mt-6
-        bg-blue-600
-        hover:bg-blue-700
-        disabled:bg-gray-400
-        text-white
-        px-6
-        py-3
-        rounded-xl
-        font-medium
-        transition
-        "
-      >
+      <div className="flex gap-3 mt-5">
 
-        {uploading
-          ? "Processing Video..."
-          : "Upload Video"}
+          {files.length > 0 && (
 
-      </button>
+              <button
+
+                  onClick={() => {
+
+                      setFiles([]);
+
+                  }}
+                  disabled={uploading}
+
+                  className={`
+                    border
+                    px-4
+                    py-3
+                    rounded-xl
+
+                    ${
+                        uploading
+                        ? "border-gray-300 text-gray-400 cursor-not-allowed"
+                        : "border-red-500 text-red-600"
+                    }
+                `}
+
+              >
+
+                  Clear All
+
+              </button>
+
+          )}
+
+          <button
+
+              onClick={handleUpload}
+
+              disabled={
+                  uploading ||
+                  files.length === 0
+              }
+
+              className="
+              flex-1
+              bg-blue-600
+              hover:bg-blue-700
+              disabled:bg-gray-400
+              text-white
+              py-3
+              rounded-xl
+              font-medium
+              transition
+              "
+
+          >
+
+              {uploading
+
+                  ? "Processing Videos..."
+
+                  : "Upload Videos"
+
+              }
+
+          </button>
+
+      </div>
+
+
+      {uploading && (
+
+          <p className="mt-3 text-sm text-blue-600">
+
+              Please wait. Videos are being indexed.
+              Do not close this page.
+
+          </p>
+
+      )}
 
       {message && (
 

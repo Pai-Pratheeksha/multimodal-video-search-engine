@@ -208,6 +208,151 @@ async def upload_video(
             result
     }
 
+@app.post("/upload-batch", tags=["Video Processing"])
+async def upload_batch(
+    files: list[UploadFile] = File(...)
+):
+
+    library_file = "indexes/video_library.json"
+
+    os.makedirs(
+        "videos",
+        exist_ok=True
+    )
+
+    video_library = []
+
+    if os.path.exists(library_file):
+
+        try:
+
+            with open(library_file, "r") as f:
+                video_library = json.load(f)
+
+        except json.JSONDecodeError:
+
+            video_library = []
+
+    processed = []
+
+    duplicates = []
+
+    failed = []
+
+    for file in files:
+        if not file.filename.lower().endswith(".mp4"):
+
+            failed.append({
+
+                "video": file.filename,
+
+                "reason": "Invalid file type"
+
+            })
+
+            continue
+
+        video_id = (
+            os.path.splitext(file.filename)[0]
+            .strip()
+            .lower()
+            .replace(" ", "_")
+        )
+
+        if any(
+            video["video_id"] == video_id
+            for video in video_library
+        ):
+
+            duplicates.append(file.filename)
+
+            continue
+
+        video_path = os.path.join(
+            "videos",
+            file.filename
+        )
+
+        with open(video_path, "wb") as buffer:
+
+            shutil.copyfileobj(
+                file.file,
+                buffer
+            )
+
+        try:
+
+            process_video(
+                video_path,
+                video_id
+            )
+
+        except Exception as e:
+
+            if os.path.exists(video_path):
+
+                os.remove(video_path)
+
+            failed.append({
+
+                "video": file.filename,
+
+                "reason": str(e)
+
+            })
+
+            continue
+
+        video_library.append({
+
+            "video_id": video_id,
+
+            "video_name": file.filename
+
+        })
+
+        processed.append({
+
+            "video_id": video_id,
+
+            "video_name": file.filename
+
+        })
+
+    with open(library_file, "w") as f:
+
+        json.dump(
+            video_library,
+            f,
+            indent=4
+        )
+
+    if processed:
+
+        message = (
+            f"Processed {len(processed)} video(s). "
+            f"Skipped {len(duplicates)} duplicate(s). "
+            f"Failed {len(failed)} upload(s)."
+        )
+
+    else:
+
+        message = (
+            "No new videos were uploaded."
+        )
+
+    return {
+
+        "message": message,
+
+        "processed": processed,
+
+        "duplicates": duplicates,
+
+        "failed": failed
+
+    }
+
 @app.get("/health")
 def health():
 

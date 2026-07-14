@@ -32,7 +32,7 @@ const VideoPlayer = forwardRef<
         mb-4
         ">
 
-          Video Preview
+          Video Player
 
         </h2>
 
