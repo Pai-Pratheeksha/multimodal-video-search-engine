@@ -15,6 +15,7 @@ Video Processing Pipeline
 import os
 import numpy as np
 import torch
+import json
 
 from PIL import Image
 
@@ -35,13 +36,19 @@ PROCESSOR = CLIPProcessor.from_pretrained(
 
 
 def generate_embeddings(
-    frame_dir: str = "frames",
-    output_file: str = "indexes/frame_embeddings.npy"
+    video_id: str,
+    output_file: str = None
 ):
 
-    embeddings = []
+    if output_file is None:
+         output_file = f"indexes/{video_id}_embeddings.npy"
 
-    frame_names = []
+    frame_dir = os.path.join(
+        "frames",
+        video_id
+    )
+
+    embeddings = []
 
     files = sorted([
         f for f in os.listdir(frame_dir)
@@ -89,10 +96,6 @@ def generate_embeddings(
             embedding
         )
 
-        frame_names.append(
-            file
-        )
-
     embeddings = np.array(
         embeddings,
         dtype=np.float32
@@ -107,6 +110,27 @@ def generate_embeddings(
         output_file,
         embeddings
     )
+
+    with open(
+        f"metadata/{video_id}.json",
+        "r"
+    ) as f:
+        metadata = json.load(f)
+
+    for i, embedding in enumerate(embeddings):
+
+        metadata[i]["vector_id"] = i
+
+    with open(
+        f"metadata/{video_id}.json",
+        "w"
+    ) as f:
+
+        json.dump(
+            metadata,
+            f,
+            indent=4
+        )
 
     return {
 

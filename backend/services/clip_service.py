@@ -27,6 +27,7 @@ processor = CLIPProcessor.from_pretrained(
 
 def search_frames(
     query: str,
+    selected_videos=None,
     top_k: int = 20
 ):
     if os.path.exists(
@@ -37,35 +38,32 @@ def search_frames(
             "indexes/frame_index.faiss"
         )
 
-        with open(
-            "indexes/frame_names.json",
-            "r"
-        ) as f:
-
-            FRAME_NAMES = json.load(f)
-
     else:
 
         index = None
 
-        FRAME_NAMES = []
+    FRAME_METADATA = []
 
-    if os.path.exists(
-        "indexes/frame_timestamps.json"
-    ):
+    metadata_file = "indexes/frame_metadata.json"
 
-        with open(
-            "indexes/frame_timestamps.json",
-            "r"
-        ) as f:
+    if os.path.exists(metadata_file):
 
-            FRAME_TIMESTAMPS = (
-                json.load(f)
-            )
+        try:
 
-    else:
+            with open(metadata_file, "r") as f:
+                FRAME_METADATA = json.load(f)
 
-        FRAME_TIMESTAMPS = {}
+        except json.JSONDecodeError:
+
+            FRAME_METADATA = []
+
+    metadata_lookup = {
+
+        item["vector_id"]: item
+
+        for item in FRAME_METADATA
+
+    }
 
     if index is None:
         return []
@@ -107,30 +105,49 @@ def search_frames(
     for rank, idx in enumerate(
         indices[0]
     ):
+        frame = metadata_lookup.get(int(idx))
+
+        if not frame:
+            continue
 
         similarity = float(
             similarities[0][rank]
         )
 
-        if similarity >= 0.22:
-            frame_name = (
-                FRAME_NAMES[idx]
-            )
+        if similarity < 0.22:
+            continue
 
-            results.append({
+        if (
+            selected_videos
+            and
+            frame["video_id"]
+            not in selected_videos
+        ):
 
-                "frame":
-                    frame_name,
+            continue
+        
+        print(frame["video_id"], selected_videos)
 
-                "similarity":
-                    round(
-                        similarity,
-                        4
-                ),
-                "timestamp":
-                    FRAME_TIMESTAMPS[
-                        frame_name
-                    ]["timestamp"]
-            })
+        results.append({
+
+            "video_id":
+                frame["video_id"],
+
+            "frame":
+                frame["frame"],
+
+            "frame_path":
+                f"{frame['video_id']}/{frame['frame']}",
+
+            "timestamp":
+                frame["timestamp"],
+
+            "similarity":
+                round(
+                    similarity,
+                    4
+                )
+
+        })
 
     return results

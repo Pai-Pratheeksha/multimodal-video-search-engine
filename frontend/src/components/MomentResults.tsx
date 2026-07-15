@@ -6,7 +6,7 @@ interface Props {
 
   onJump:
     (
-      timestamp: number
+      moment: Moment
     ) => void;
 
     activeTimestamp:
@@ -227,7 +227,7 @@ function MomentResults({
               <button
                 onClick={() =>
                     onJump(
-                    moment.timestamp
+                    moment
                     )
                 }
                 className="

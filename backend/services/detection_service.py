@@ -25,9 +25,14 @@ MODEL = YOLO(
 
 
 def detect_objects(
-    frame_dir: str = "frames",
+    video_id: str,
     output_file: str = "indexes/frame_objects.json"
 ):
+
+    frame_dir = os.path.join(
+        "frames",
+        video_id
+    )
 
     frame_objects = {}
 
@@ -73,27 +78,56 @@ def detect_objects(
             set(detected_objects)
         )
 
-        frame_objects[file] = (
-            detected_objects
-        )
+        frame_objects[
+            f"{video_id}/{file}"
+        ] = detected_objects
 
     os.makedirs(
         "indexes",
         exist_ok=True
     )
 
-    with open(
-        output_file,
-        "w"
-    ) as f:
+    existing_objects = {}
+
+    if os.path.exists(output_file):
+
+        try:
+
+            with open(output_file, "r") as f:
+
+                existing_objects = json.load(f)
+
+        except json.JSONDecodeError:
+
+            existing_objects = {}
+
+    existing_objects = {
+
+        frame: objects
+
+        for frame, objects in existing_objects.items()
+
+        if not frame.startswith(
+            f"{video_id}/"
+        )
+
+    }
+
+    existing_objects.update(
+        frame_objects
+    )
+
+    with open(output_file, "w") as f:
 
         json.dump(
-            frame_objects,
+            existing_objects,
             f,
             indent=4
         )
 
     return {
+
+        "video_id": video_id,
 
         "frames_processed":
             len(files),

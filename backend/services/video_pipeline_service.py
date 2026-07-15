@@ -39,33 +39,36 @@ from backend.services.transcript_generation_service import (
 
 
 def process_video(
-    video_path: str
+    video_path: str,
+    video_id: str
 ):
 
     frame_result = extract_frames(
-        video_path
+        video_path,
+        video_id
     )
 
     embedding_result = (
-        generate_embeddings()
+        generate_embeddings(video_id)
     )
 
     index_result = (
-        build_faiss_index()
+        build_faiss_index(video_id)
     )
 
     detection_result = (
-        detect_objects()
+        detect_objects(video_id)
     )
 
     audio_result = (
         extract_audio(
-            video_path
+            video_path,
+            video_id
         )
     )
 
     transcript_result = (
-        generate_transcript()
+        generate_transcript(video_id)
     )
 
     return {

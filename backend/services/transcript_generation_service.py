@@ -24,9 +24,16 @@ MODEL = whisper.load_model(
 
 
 def generate_transcript(
-    audio_file: str = "transcripts/audio.wav",
-    output_file: str = "transcripts/transcript.json"
+    video_id: str
 ):
+
+    audio_file = (
+        f"transcripts/{video_id}_audio.wav"
+    )
+
+    output_file = (
+        f"transcripts/{video_id}.json"
+    )
 
     result = MODEL.transcribe(
         audio_file,
@@ -38,6 +45,9 @@ def generate_transcript(
     for segment in result["segments"]:
 
         segments.append({
+
+            "video_id":
+                video_id,
 
             "start":
                 segment["start"],

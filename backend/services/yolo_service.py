@@ -7,40 +7,48 @@ using YOLO detections.
 import os
 import json
 
-def search_objects(query: str):
+def search_objects(query: str, selected_videos=None):
+    FRAME_OBJECTS = []
+
     if os.path.exists(
         "indexes/frame_objects.json"
     ):
 
-        with open(
-            "indexes/frame_objects.json",
-            "r"
-        ) as f:
+        try:
 
-            FRAME_OBJECTS = (
-                json.load(f)
-            )
+            with open(
+                "indexes/frame_objects.json",
+                "r"
+            ) as f:
 
-    else:
+                FRAME_OBJECTS = json.load(f)
 
-        FRAME_OBJECTS = {}
+        except json.JSONDecodeError:
+
+            FRAME_OBJECTS = []
 
     if os.path.exists(
-        "indexes/frame_timestamps.json"
+        "indexes/frame_metadata.json"
     ):
 
         with open(
-            "indexes/frame_timestamps.json",
+            "indexes/frame_metadata.json",
             "r"
         ) as f:
 
-            FRAME_TIMESTAMPS = (
-                json.load(f)
-            )
+            FRAME_METADATA = json.load(f)
 
     else:
 
-        FRAME_TIMESTAMPS = {}
+        FRAME_METADATA = []
+
+    metadata_lookup = {
+
+        f"{item['video_id']}/{item['frame']}": item
+
+        for item in FRAME_METADATA
+
+    }
 
 
     if not FRAME_OBJECTS:
@@ -56,17 +64,44 @@ def search_objects(query: str):
             for obj in objects
         ]
 
-        if query.lower() in objects_lower:
+        if query.lower() not in objects_lower:
+            continue
+        
+        metadata = metadata_lookup.get(frame)
 
-            matches.append({
-                "frame":
-                    frame,
+        if not metadata:
+            continue
 
-                "timestamp":
-                    FRAME_TIMESTAMPS
-                    .get(frame, {})
-                    .get("timestamp", 0)
+        if (
 
-            })
+            selected_videos
+
+            and
+
+            metadata["video_id"]
+
+            not in selected_videos
+
+        ):
+
+            continue
+        
+        print("YOLO:", metadata["video_id"])
+
+        matches.append({
+
+            "video_id":
+                metadata["video_id"],
+
+            "frame":
+                metadata["frame"],
+
+            "frame_path":
+                frame,
+
+            "timestamp":
+                metadata["timestamp"]
+
+        })
 
     return matches[:MAX_RESULTS]
