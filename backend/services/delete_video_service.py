@@ -85,7 +85,7 @@ def delete_video(video_id: str):
 
     audio_file = os.path.join(
         "transcripts",
-        f"{video_id}.wav"
+        f"{video_id}_audio.wav"
     )
 
     if os.path.exists(audio_file):
