@@ -2,34 +2,60 @@
 
 ## Overview
 
-The Multimodal Video Search Engine combines computer vision, speech recognition, vector search, and multimodal fusion to retrieve relevant video moments.
+The Multimodal Video Search Engine is a scalable multimedia retrieval system that combines computer vision, speech recognition, vector similarity search, and multimodal fusion to retrieve relevant moments across multiple videos.
+
+The system supports incremental indexing, scoped multi-video search, batch uploads, automatic video switching, and complete video lifecycle management.
 
 ---
 
 ## High-Level Pipeline
 
 ```text
-Video Upload
-      │
-      ▼
-Video Processing
-      │
- ┌────┼────┐
- ▼    ▼    ▼
-CLIP YOLO Whisper
- │    │     │
- └────┼─────┘
-      ▼
-Fusion Engine
-      ▼
-Unified Moments
-      ▼
-React Frontend
+                    React + Vite
+                           │
+        ┌──────────────────┴──────────────────┐
+        │                                     │
+ Batch Video Upload                   Search Query
+        │                                     │
+        ▼                                     ▼
+                  FastAPI Backend
+                         │
+                         ▼
+              Video Processing Pipeline
+                         │
+        ┌────────┬────────┬────────┬─────────┐
+        ▼        ▼        ▼        ▼
+   Frame      CLIP     YOLO     Whisper
+ Extraction Embeddings Objects Transcript
+        │        │        │        │
+        └────────┴────────┴────────┘
+                    │
+      Incremental FAISS Index (IndexIDMap2)
+                    │
+                    ▼
+          Multimodal Fusion Engine
+                    │
+                    ▼
+          Ranked Search Results
+                    │
+                    ▼
+     Interactive Video Navigation
 ```
 
 ---
 
 ## Video Processing Pipeline
+
+Each uploaded video passes through the following stages:
+
+1. Frame Extraction
+2. CLIP Embedding Generation
+3. Incremental FAISS Indexing
+4. YOLO Object Detection
+5. Audio Extraction
+6. Whisper Transcription
+7. Metadata Generation
+8. Video Library Update
 
 ### Frame Extraction
 
@@ -53,13 +79,20 @@ Model:
 openai/clip-vit-base-patch16
 ```
 
-Embeddings are indexed using FAISS.
+Embeddings are normalized and inserted into a FAISS IndexIDMap2, enabling:
+
+- Incremental indexing
+- Stable vector IDs
+- Efficient vector deletion
+- Cosine similarity search
 
 Outputs:
 
 ```text
-frame_index.faiss
-frame_names.json
+indexes/
+├── frame_index.faiss
+├── frame_metadata.json
+├── video_library.json
 ```
 
 ---
@@ -74,11 +107,7 @@ Model:
 YOLOv8
 ```
 
-Output:
-
-```text
-frame_objects.json
-```
+Each processed frame stores detected object labels, allowing object-based retrieval within selected videos.
 
 ---
 
@@ -95,7 +124,11 @@ OpenAI Whisper
 Output:
 
 ```text
-transcript.json
+transcripts/
+├── lecture.json
+├── lecture_audio.wav
+├── meeting.json
+├── meeting_audio.wav
 ```
 
 ---
@@ -128,12 +161,20 @@ Combines results from:
 * YOLO
 * Whisper
 
-Techniques:
+Fusion combines evidence using:
 
-* Temporal Clustering
-* Confidence Scoring
-* Evidence Aggregation
-* Ranking
+- Temporal clustering
+- Weighted confidence scoring
+- Cross-modal evidence aggregation
+- Ranking
+
+Weights:
+
+CLIP      → 0.6
+
+YOLO      → 0.2
+
+Whisper   → 0.2
 
 Output:
 
@@ -151,40 +192,118 @@ Output:
 
 ---
 
+## Incremental Indexing
+
+The system avoids rebuilding the complete FAISS index when new videos are uploaded.
+
+Each upload:
+
+- generates new CLIP embeddings
+- assigns unique vector IDs
+- inserts vectors into IndexIDMap2
+- updates metadata
+- preserves existing vectors
+
+## Video Lifecycle
+
+Videos move through the following lifecycle:
+
+Upload
+      ↓
+Processing
+      ↓
+Indexing
+      ↓
+Search
+      ↓
+Preview
+      ↓
+Deletion
+      ↓
+Metadata Cleanup
+      ↓
+Vector Removal
+
+---
+
 ## Frontend Architecture
 
 ### UploadForm
 
-Video upload and processing.
+- Batch upload
+- File validation
+- Duplicate handling
+
+### VideoLibrary
+
+- Video preview
+- Multi-video selection
+- Video deletion
 
 ### SearchBar
 
-Natural language query input.
-
-### VideoPlayer
-
-Video preview and playback.
+- Query submission
 
 ### MomentResults
 
-Search result visualization and navigation.
+- Ranked results
+- Confidence indicators
+- Jump to moment
+
+### VideoPlayer
+
+- Automatic video switching
+- Timestamp navigation
+
+---
+
+## Design Decisions
+
+Why CLIP?
+
+- Open vocabulary semantic search.
+
+Why YOLO?
+
+- Accurate object localization.
+
+Why Whisper?
+
+- Speech understanding.
+
+Why FAISS?
+
+- Fast approximate nearest-neighbor search.
+
+Why IndexIDMap2?
+
+- Stable vector identifiers for incremental insertion and deletion.
+
+Why Temporal Fusion?
+
+- Combines complementary evidence from vision and speech.
 
 ---
 
 ## Current Limitations
 
-* Single video indexing
-* Local FAISS storage
-* Sequential processing
-* CPU inference
+- Local filesystem storage
+- CPU inference
+- Sequential processing pipeline
+- No authentication
+- Single-user deployment
 
 ---
 
 ## Future Enhancements
 
-* Multi-video collections
-* PostgreSQL metadata storage
-* Qdrant vector database
-* Agentic AI query planning
-* Streaming video indexing
-* Cloud deployment
+- Background task queue
+- Docker deployment
+- GPU acceleration
+- PostgreSQL metadata storage
+- Cloud object storage
+- Distributed vector database
+- User authentication
+- Query caching
+- LLM-powered video summarization
+- Conversational video search
