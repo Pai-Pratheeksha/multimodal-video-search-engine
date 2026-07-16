@@ -208,6 +208,8 @@ Each upload:
 
 Videos move through the following lifecycle:
 
+```text
+
 Upload
       ↓
 Processing
@@ -223,7 +225,7 @@ Deletion
 Metadata Cleanup
       ↓
 Vector Removal
-
+```
 ---
 
 ## Frontend Architecture
